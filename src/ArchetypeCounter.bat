@@ -151,6 +151,9 @@ $Placeholder1 = "$Global:CounterWorkingDir\debug\placeholder.txt"; $Placeholder2
 $TodaysDate = (Get-Date).ToString('MM-dd-yyyy')
 if (!(Test-Path -Path "$Global:CounterWorkingDir\stored\backup\$TodaysDate")) { (New-Item -Path "$Global:CounterWorkingDir\stored\backup" -Type Directory -Name $TodaysDate) > $null; (Get-ChildItem "$Global:CounterWorkingDir\stored" -Directory | Where-Object { $_.Name -like '*Profile*' } | Copy-Item -Destination "$Global:CounterWorkingDir\stored\backup\$TodaysDate" -Recurse -Force) > $null }
 
+# Creates a CSV file for holding the encounter history
+if (!(Test-Path -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv")) { (New-Item -Path "$Global:CounterWorkingDir\stored\history" -Type File -Name "$TodaysDate.csv" -Value "Timestamp,Pokemon Name,Alpha,Legendary,Shiny`n") }
+
 ###############################
 # --------------------------- #
 # --- REQUIRED ASSEMBLIES --- #
@@ -1826,6 +1829,11 @@ $ArchetypeCounterForm.Add_Shown({
 
                             # Clears specific variables being used to avoid any issues
                             Clear-Variable -Name OCRCaptureEncountered, OCRCaptureEncounteredNumber, NotifyEncounterCount
+
+                            # Adds the scanned Pokemon to the history file
+                            $TodaysDate = (Get-Date).ToString('MM-dd-yyyy')
+                            $CurrentTime = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fff')
+                            Add-Content -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv" -Value "$CurrentTime,$OCRCapture,$OCRCapturedAlpha,$OCRCapturedLegendary,$OCRCapturedShiny"
 
                             # Checks if the encountered profile file matches the scanned pokemon
                             if ($GetConfigProfileEncountered | Where-Object { $_ -match "\b$OCRCapture\b" }) {
