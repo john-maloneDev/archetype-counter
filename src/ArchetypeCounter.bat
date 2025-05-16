@@ -153,7 +153,7 @@ if (!(Test-Path -Path "$Global:CounterWorkingDir\stored\backup\$TodaysDate")) { 
 
 # Creates a CSV file for holding the encounter history
 if (!(Test-Path -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv")) { 
-    (New-Item -Path "$Global:CounterWorkingDir\stored\history" -Type File -Name "$TodaysDate.csv" -Value "Timestamp,Pokedex Number,Pokemon Name,Level,Alpha,Legendary,Shiny`n") 
+    (New-Item -Path "$Global:CounterWorkingDir\stored\history" -Type File -Name "$TodaysDate.csv" -Value "Timestamp,Pokedex Number,Pokemon Name,Level,Alpha,Legendary,Shiny,Location,Channel,PokeYen,DOW,In-Game Time`n")
 }
 
 ###############################
@@ -1548,7 +1548,8 @@ $ArchetypeCounterForm.Add_Shown({
         $EncounteredCurrentProfile = "$Global:CounterWorkingDir\stored\$($Script:SyncHashTable.GetProfile)\Config_$($Script:SyncHashTable.GetProfile)_Encountered.txt"
 
         # PokeMMO GUI Scale (UI Scaling) / 1.0 = 1 / 1.25x = 0.8 / 1.5x = 0.6666667
-        $GetMainPokeMMOScale = $Script:SyncHashTable.GetMainProperties -match "client.gui.scale.guiscale="; $GetMainPokeMMOScale = $GetMainPokeMMOScale -replace "client.gui.scale.guiscale=", ""
+        $GetMainPokeMMOScale = $Script:SyncHashTable.GetMainProperties -match "client.gui.scale.guiscale=";
+        $GetMainPokeMMOScale = $GetMainPokeMMOScale -replace "client.gui.scale.guiscale=", ""
 
         # PokeMMO Battle Size / 100 = Default
         $GetMainPokeMMOBattleSize = $Script:SyncHashTable.GetMainProperties -match "client.graphics.battle.size="; $GetMainPokeMMOBattleSize = $GetMainPokeMMOBattleSize -replace "client.graphics.battle.size=", ""; $GetMainPokeMMOBattleSize = $GetMainPokeMMOBattleSize -join '-'
@@ -1672,11 +1673,25 @@ $ArchetypeCounterForm.Add_Shown({
                     cmd.exe /c "magick ArchetypeScreenshot.tif -trim +repage ArchetypeScreenshot.tif"
 
                     # Pre-Cropping of the Battle Screen before ImageMagick filtering
-                    $ArchetypeScreenshotEncounter = New-Object System.Drawing.Bitmap("$PWD\ArchetypeScreenshot.tif"); $GameWidth = $ArchetypeScreenshotEncounter.Width; $GameHeight = $ArchetypeScreenshotEncounter.Height; $BattleWidth = [math]::Ceiling(($GameWidth - 15.999)*0.7*(0.005725*$GetMainPokeMMOBattleSize+0.4275)); if ($BattleWidth -le "760") { $BattleWidth = "760" }; $XCropValue = [Math]::Floor(($GameWidth - 15.999 - $BattleWidth) / 2); $WCropValue = $BattleWidth; $RectImageEncounter = New-Object System.Drawing.Rectangle($XCropValue,50,$WCropValue,300); $CropSliceEncounter = $ArchetypeScreenshotEncounter.Clone($RectImageEncounter, $ArchetypeScreenshotEncounter.PixelFormat); $CropSliceEncounter.save("$PWD\ArchetypeScreenshotEncounter.tif"); $ArchetypeScreenshotEncounter.dispose(); $RectImageEncounter.Dispose()
+                    $ArchetypeScreenshotEncounter = New-Object System.Drawing.Bitmap("$PWD\ArchetypeScreenshot.tif");
+                    $GameWidth = $ArchetypeScreenshotEncounter.Width;
+                    $GameHeight = $ArchetypeScreenshotEncounter.Height;
+                    $BattleWidth = [math]::Ceiling(($GameWidth - 15.999)*0.7*(0.005725*$GetMainPokeMMOBattleSize+0.4275));
+                    if ($BattleWidth -le "760") { $BattleWidth = "760" };
+                    $XCropValue = [Math]::Floor(($GameWidth - 15.999 - $BattleWidth) / 2);
+                    $WCropValue = $BattleWidth;
+                    $RectImageEncounter = New-Object System.Drawing.Rectangle($XCropValue,50,$WCropValue,300);
+                    $CropSliceEncounter = $ArchetypeScreenshotEncounter.Clone($RectImageEncounter,$ArchetypeScreenshotEncounter.PixelFormat);
+                    $CropSliceEncounter.save("$PWD\ArchetypeScreenshotEncounter.tif");
+                    $ArchetypeScreenshotEncounter.dispose();
+                    $RectImageEncounter.Dispose()
                     
                     # Cropping calculations for ImageMagick filtering on Archetype Screenshot for OCR
                     # ---------------------------------------------------------
-                    $ACImage = New-Object System.Drawing.Bitmap "$PWD\ArchetypeScreenshotEncounter.tif"; $ACImageWidth = $ACImage.Width; $ACImageWidth = [int]$ACImageWidth; $ACImage.Dispose()
+                    $ACImage = New-Object System.Drawing.Bitmap "$PWD\ArchetypeScreenshotEncounter.tif";
+                    $ACImageWidth = $ACImage.Width;
+                    $ACImageWidth = [int]$ACImageWidth;
+                    $ACImage.Dispose()
                     # -- Crop 1 -----------------------------------------------
                     $crop1width = 260/"$GetMainPokeMMOScale"+35
                     $crop1height = 63/"$GetMainPokeMMOScale"+25
@@ -1691,15 +1706,30 @@ $ArchetypeCounterForm.Add_Shown({
                     $crop3offsetY= 118/"$GetMainPokeMMOScale"-52
                     # -- Crop 4 -----------------------------------------------
                     $crop4offsetX = $ACImageWidth/2+170/"$GetMainPokeMMOScale"-38
+                    # -- Crop 5 -----------------------------------------------
+                    $crop5width = 258
+                    $crop5height = 284
+                    $crop5offsetX = 26
                     # -- Crop Final -------------------------------------------
                     $Crop1 = "$crop1width" + "x" + "$crop1height" + "+" + "$crop1offsetX" + "+" + "$crop1offsetY"
                     $Crop2 = "$crop2width" + "x" + "$crop2height" + "+" + "$crop2offsetX" + "+" + "$crop2offsetY"
                     $Crop3 = "$crop1width" + "x" + "$crop2height" + "+" + "$crop2offsetX" + "+" + "$crop3offsetY"
                     $Crop4 = "$crop1width" + "x" + "$crop2height" + "+" + "$crop4offsetX" + "+" + "$crop3offsetY"
+                    $Crop5 = "$crop5width" + "x" + "$crop5height" + "+" + "$crop5offsetX" + "+0"
+
+                    # Properly filters out the metadata for the battle and saves it for OCR
+                    cmd.exe /c "magick convert ArchetypeScreenshot.tif -crop $Crop5  ArchetypeScreenshotMetadata.tif"
+                    cmd.exe /c 'magick ArchetypeScreenshotMetadata.tif -background black -alpha remove -alpha off -colorspace Gray -despeckle -contrast -resize 200%x200% -density 300 -units pixelsperinch -threshold 55% ArchetypeScreenshotMetadata.tif'
 
                     # Properly filters out Archetype screenshot and isolates the Poke Name plates for OCR (Advanced Logic Filtering)
                     cmd.exe /c "magick ArchetypeScreenshotEncounter.tif ^ ( -clone 0 -crop $Crop1 ) ^ ( -clone 0 -crop $Crop2 ) ^ ( -clone 0 -crop $Crop3 ) ^ ( -clone 0 -crop $Crop4 ) ^ -delete 0 -background #000000 -flatten ArchetypeScreenshotEncounter.tif"
                     cmd.exe /c 'magick ArchetypeScreenshotEncounter.tif ^ ( +clone -colorspace HSL -channel S -separate -negate -fill black -fuzz 99.9% -opaque black ) ^ -alpha off -compose copy_opacity -composite ^ -background black -alpha remove -alpha off -colorspace Gray -despeckle -contrast -resize 200%x200% -density 300 -units pixelsperinch -threshold 55% ArchetypeScreenshotMagick.tif'
+
+                    # Code for adding male and female symbols - need to fine code tesseract to read them correctly
+                    # cmd.exe /c 'magick convert ArchetypeScreenshotEncounter.tif -fuzz 20% -fill white -opaque #E02DEB white-female.tif'
+                    # cmd.exe /c 'magick white-female.tif -fuzz 20% -fill Black -floodfill +30+70  #2E88FB black-background.tif'
+                    # cmd.exe /c 'magick convert black-background.tif -fuzz 17% -fill white -opaque #2E88FB white-male.tif'
+                    # cmd.exe /c 'magick white-male.tif ^ ( +clone -colorspace HSL -channel S -separate -negate -fill black -fuzz 99.9% -opaque black ) ^ -alpha off -compose copy_opacity -composite ^ -background black -alpha remove -alpha off -colorspace Gray -despeckle -contrast -resize 200%x200% -density 300 -units pixelsperinch -threshold 55% new-output.tif'
 
                     # Resets back to counter working directory
                     Set-Location $Global:CounterWorkingDir
@@ -1711,20 +1741,49 @@ $ArchetypeCounterForm.Add_Shown({
                     Set-Location "$Global:CounterWorkingDir\lib\Tesseract-OCR-5.3.2x64\bin"
 
                     # Run Tesseract OCR with correct language and parameters
-                    if ($GameLanguage -match "English" -or $GameLanguage -match "French" -or $GameLanguage -match "German") { ./tesseract.exe "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29\ArchetypeScreenshotMagick.tif" ArchetypeCounterOCR -l $OCRLanguage --psm 6 } elseif ($GameLanguage -match "Korean") { ./tesseract.exe "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29\ArchetypeScreenshotMagick.tif" ArchetypeCounterOCR -l $OCRLanguage --psm 6 -c preserve_interword_spaces=1 } elseif ($GameLanguage -match "Japanese" -or $GameLanguage -match "ChineseSimplified" -or $GameLanguage -match "ChineseTraditional") { ./tesseract.exe "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29\ArchetypeScreenshotMagick.tif" ArchetypeCounterOCR -l $OCRLanguage --psm 6 -c chop_enable=T -c use_new_state_cost=F -c segment_segcost_rating=F -c enable_new_segsearch=0 -c language_model_ngram_on=0 -c textord_force_make_prop_words=F -c edges_max_children_per_outline=40 }
+                    if ($GameLanguage -match "English" -or $GameLanguage -match "French" -or $GameLanguage -match "German") { 
+                        ./tesseract.exe "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29\ArchetypeScreenshotMagick.tif" ArchetypeCounterOCR -l $OCRLanguage --psm 6
+                        ./tesseract.exe "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29\ArchetypeScreenshotMetadata.tif" ArchetypeMetadataOCR -l $OCRLanguage --psm 6
+                    } elseif ($GameLanguage -match "Korean") { 
+                        ./tesseract.exe "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29\ArchetypeScreenshotMagick.tif" ArchetypeCounterOCR -l $OCRLanguage --psm 6 -c preserve_interword_spaces=1
+                        ./tesseract.exe "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29\ArchetypeScreenshotMetadata.tif" ArchetypeMetadataOCR -l $OCRLanguage --psm 6 -c preserve_interword_spaces=1 
+                    } elseif ($GameLanguage -match "Japanese" -or $GameLanguage -match "ChineseSimplified" -or $GameLanguage -match "ChineseTraditional") {
+                        ./tesseract.exe "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29\ArchetypeScreenshotMagick.tif" ArchetypeCounterOCR -l $OCRLanguage --psm 6 -c chop_enable=T -c use_new_state_cost=F -c segment_segcost_rating=F -c enable_new_segsearch=0 -c language_model_ngram_on=0 -c textord_force_make_prop_words=F -c edges_max_children_per_outline=40
+                        ./tesseract.exe "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29\ArchetypeScreenshotMetadata.tif" ArchetypeMetadataOCR -l $OCRLanguage --psm 6 -c chop_enable=T -c use_new_state_cost=F -c segment_segcost_rating=F -c enable_new_segsearch=0 -c language_model_ngram_on=0 -c textord_force_make_prop_words=F -c edges_max_children_per_outline=40
+                    }
 
                     # Resets back to counter working directory
                     Set-Location $Global:CounterWorkingDir
 
-                    # Grabs current OCR scanned text from "ArchetypeCounterOCR" text file
+                    # Grabs current OCR scanned text from "ArchetypeCounterOCR" & "ArchetypeMetadataOCR" text files
                     $OCRSetConfig = "$Global:CounterWorkingDir\lib\Tesseract-OCR-5.3.2x64\bin\ArchetypeCounterOCR.txt";
                     $OCRGetConfig = [IO.File]::ReadAllLines("$OCRSetConfig");
                     $OCRCaptured = $OCRGetConfig;
+                    $OCRSetMetadata = "$Global:CounterWorkingDir\lib\Tesseract-OCR-5.3.2x64\bin\ArchetypeMetadataOCR.txt";
+                    $OCRSetMetadata = [IO.File]::ReadAllLines("$OCRSetMetadata");
+                    $OCRMetadata = $OCRSetMetadata;
                     $OCRPokeLevel = 0
                     Remove-Item $OCRSetConfig -Force
+                    Remove-Item $OCRSetMetadata -Force
 
                     # (DEBUG OUTPUT) *
-                    [IO.File]::AppendAllText("$Global:CounterWorkingDir\debug\AC_Debug_Output.txt", "-------------------`n| Before Cleanup: |`n-------------------`n`n$OCRCaptured`n`n")
+                    [IO.File]::AppendAllText("$Global:CounterWorkingDir\debug\AC_Debug_Output.txt", "-------------------`n| Before Cleanup: |`n-------------------`n`n$OCRCaptured`n`n$OCRMetadata`n`n")
+
+                    # Gets the location and channel from the OCR return
+                    $metadataMatch = [regex]::Match($OCRMetadata, '(.+) Ch. (\d) \$(.+) (.+day), (\d\d:\d\d)');
+                    if ($metadataMatch) {
+                        $PokeLocation = $metadataMatch.Groups[1].Value
+                        $PokeChannel = $metadataMatch.Groups[2].Value
+                        $Pokeyen = $metadataMatch.Groups[3].Value.Replace(',','')
+                        $DayOfTheWeek = $metadataMatch.Groups[4].Value
+                        $InGameTime = $metadataMatch.Groups[5].Value
+                    } else {
+                        $PokeLocation = ''
+                        $PokeChannel = ''
+                        $Pokeyen = ''
+                        $DayOfTheWeek = ''
+                        $InGameTime = ''
+                    }
 
                     # Stores 'OCRCaptured' into a variable to check later (For Shiny Pokemon)
                     if (($OCRCaptured -match '\b('+($ShinyMatchArray -join '|')+')\b')) { $OCRCapturedShiny = $true } else { $OCRCapturedShiny = $false }
@@ -1739,25 +1798,62 @@ $ArchetypeCounterForm.Add_Shown({
                     if ($OCRCapturedAlpha -match $true) {
 
                         # Adds value into counter menu (For Alpha)
-                        $GetPokeAlphaCount = $AlphaCount; $SetPokeAlphaCount = [int]$GetPokeAlphaCount + [int]1; $GetConfigProfile = $GetConfigProfile -replace "Alpha_Count=.*", "Alpha_Count=$SetPokeAlphaCount"; [IO.File]::WriteAllLines($SetConfigProfile, $GetConfigProfile)
+                        $GetPokeAlphaCount = $AlphaCount; $SetPokeAlphaCount = [int]$GetPokeAlphaCount + [int]1;
+                        $GetConfigProfile = $GetConfigProfile -replace "Alpha_Count=.*", "Alpha_Count=$SetPokeAlphaCount";
+                        [IO.File]::WriteAllLines($SetConfigProfile, $GetConfigProfile)
                         
                     # Checks if OCRCapturedLegendary variable matches true
                     } elseif ($OCRCapturedLegendary -match $true) {
 
                         # Processes Legendary dialog and adding value into counter menu (For Legendary)
-                        . SetDialogTransparentBackground; $TaskDialogLegendary = [Ookii.Dialogs.WinForms.TaskDialog]::new(); $TaskDialogLegendary.WindowTitle = "Archtype Counter"; $TaskDialogLegendary.ButtonStyle = 'CommandLinks'; $TaskDialogLegendary.CustomMainIcon = $Script:SyncHashTable.ArchetypeCounterSystrayIcon; $TaskDialogLegendary.MainInstruction = "PokeMMO Legendary Detection"; $TaskDialogLegendary.Content = "You have found a LEGENDARY Pokémon!"; $TaskDialogLegendaryOk = [Ookii.Dialogs.WinForms.TaskDialogButton]::new(); $TaskDialogLegendaryOk.Text = 'Ok'; $TaskDialogLegendary.Footer = "Current Encountered Count: $EncounteredCount"; $TaskDialogLegendary.FooterIcon = 'Information'; $TaskDialogLegendary.AllowDialogCancellation = $true; $TaskDialogLegendary.Buttons.Add($TaskDialogLegendaryOk); $TaskDialogLegendary.ShowDialog($Script:SyncHashTable.ArchetypeCounterForm); . RemoveDialogTransparentBackground; $GetPokeLegendaryCount = $LegendaryCount; $SetPokeLegendaryCount = [int]$GetPokeLegendaryCount + [int]1; $GetConfigProfile = $GetConfigProfile -replace "Legendary_Count=.*", "Legendary_Count=$SetPokeLegendaryCount"; [IO.File]::WriteAllLines($SetConfigProfile, $GetConfigProfile)
+                        . SetDialogTransparentBackground; $TaskDialogLegendary = [Ookii.Dialogs.WinForms.TaskDialog]::new();
+                        $TaskDialogLegendary.WindowTitle = "Archtype Counter"; $TaskDialogLegendary.ButtonStyle = 'CommandLinks';
+                        $TaskDialogLegendary.CustomMainIcon = $Script:SyncHashTable.ArchetypeCounterSystrayIcon;
+                        $TaskDialogLegendary.MainInstruction = "PokeMMO Legendary Detection";
+                        $TaskDialogLegendary.Content = "You have found a LEGENDARY Pokémon!";
+                        $TaskDialogLegendaryOk = [Ookii.Dialogs.WinForms.TaskDialogButton]::new();
+                        $TaskDialogLegendaryOk.Text = 'Ok';
+                        $TaskDialogLegendary.Footer = "Current Encountered Count: $EncounteredCount";
+                        $TaskDialogLegendary.FooterIcon = 'Information';
+                        $TaskDialogLegendary.AllowDialogCancellation = $true;
+                        $TaskDialogLegendary.Buttons.Add($TaskDialogLegendaryOk);
+                        $TaskDialogLegendary.ShowDialog($Script:SyncHashTable.ArchetypeCounterForm);
+                        . RemoveDialogTransparentBackground;
+                        $GetPokeLegendaryCount = $LegendaryCount;
+                        $SetPokeLegendaryCount = [int]$GetPokeLegendaryCount + [int]1;
+                        $GetConfigProfile = $GetConfigProfile -replace "Legendary_Count=.*", "Legendary_Count=$SetPokeLegendaryCount";
+                        [IO.File]::WriteAllLines($SetConfigProfile, $GetConfigProfile)
 
                     # Checks if OCRCapturedShiny variable matches true
                     } elseif ($OCRCapturedShiny -match $true) {
 
                         # Processes Shiny dialog and adding value into counter menu (For Shiny)
-                        . SetDialogTransparentBackground; $TaskDialogShiny = [Ookii.Dialogs.WinForms.TaskDialog]::new(); $TaskDialogShiny.WindowTitle = "Archtype Counter"; $TaskDialogShiny.ButtonStyle = 'CommandLinks'; $TaskDialogShiny.CustomMainIcon = $Script:SyncHashTable.ShinyDialogIcon; $TaskDialogShiny.MainInstruction = "PokeMMO Shiny Detection"; $TaskDialogShiny.Content = "You have found a SHINY Pokémon!"; $TaskDialogShinyOk = [Ookii.Dialogs.WinForms.TaskDialogButton]::new(); $TaskDialogShinyOk.Text = 'Ok'; $TaskDialogShinyOk.CommandLinkNote = 'Congratulations from the Archetype Team.'; $TaskDialogShiny.Footer = "Current Encountered Count: $EncounteredCount"; $TaskDialogShiny.FooterIcon = 'Information'; $TaskDialogShiny.AllowDialogCancellation = $true; $TaskDialogShiny.Buttons.Add($TaskDialogShinyOk); $TaskDialogShiny.ShowDialog($Script:SyncHashTable.ArchetypeCounterForm);  . RemoveDialogTransparentBackground; $GetPokeShinyCount = $ShinyCount; $SetPokeShinyCount = [int]$GetPokeShinyCount + [int]1; $GetConfigProfile = $GetConfigProfile -replace "Shiny_Count=.*", "Shiny_Count=$SetPokeShinyCount"; [IO.File]::WriteAllLines($SetConfigProfile, $GetConfigProfile)
+                        . SetDialogTransparentBackground;
+                        $TaskDialogShiny = [Ookii.Dialogs.WinForms.TaskDialog]::new();
+                        $TaskDialogShiny.WindowTitle = "Archtype Counter";
+                        $TaskDialogShiny.ButtonStyle = 'CommandLinks';
+                        $TaskDialogShiny.CustomMainIcon = $Script:SyncHashTable.ShinyDialogIcon;
+                        $TaskDialogShiny.MainInstruction = "PokeMMO Shiny Detection";
+                        $TaskDialogShiny.Content = "You have found a SHINY Pokémon!";
+                        $TaskDialogShinyOk = [Ookii.Dialogs.WinForms.TaskDialogButton]::new();
+                        $TaskDialogShinyOk.Text = 'Ok';
+                        $TaskDialogShinyOk.CommandLinkNote = 'Congratulations from the Archetype Team.';
+                        $TaskDialogShiny.Footer = "Current Encountered Count: $EncounteredCount";
+                        $TaskDialogShiny.FooterIcon = 'Information';
+                        $TaskDialogShiny.AllowDialogCancellation = $true;
+                        $TaskDialogShiny.Buttons.Add($TaskDialogShinyOk);
+                        $TaskDialogShiny.ShowDialog($Script:SyncHashTable.ArchetypeCounterForm);
+                        . RemoveDialogTransparentBackground;
+                        $GetPokeShinyCount = $ShinyCount;
+                        $SetPokeShinyCount = [int]$GetPokeShinyCount + [int]1;
+                        $GetConfigProfile = $GetConfigProfile -replace "Shiny_Count=.*", "Shiny_Count=$SetPokeShinyCount";
+                        [IO.File]::WriteAllLines($SetConfigProfile, $GetConfigProfile)
 
                     }
 
                     # Take existing debug images and combine into one png image file
                     Set-Location "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29"
-                    cmd.exe /c "magick montage ArchetypeScreenshot.tif ArchetypeScreenshotEncounter.tif ArchetypeScreenshotMagick.tif -tile 1x3 -geometry +10+10 -bordercolor red -border 2 -background none AC_Debug_Screenshot.png" 
+                    cmd.exe /c "magick montage ArchetypeScreenshot.tif ArchetypeScreenshotEncounter.tif ArchetypeScreenshotMagick.tif ArchetypeScreenshotMetadata.tif -tile 1x4 -geometry +10+10 -bordercolor red -border 2 -background none AC_Debug_Screenshot.png"
                     Set-Location $Global:CounterWorkingDir
                     Move-Item -Path "$Global:CounterWorkingDir\lib\ImageMagick-7.1.1-29\*.png" -Destination "$Global:CounterWorkingDir\debug" -Force
                     
@@ -1857,7 +1953,7 @@ $ArchetypeCounterForm.Add_Shown({
                             # Adds the scanned Pokemon to the history file
                             $TodaysDate = (Get-Date).ToString('MM-dd-yyyy')
                             $CurrentTime = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fff')
-                            Add-Content -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv" -Value "$CurrentTime,$CapturedPokemonID,$OCRCapture,$OCRPokeLevel,$OCRCapturedAlpha,$OCRCapturedLegendary,$OCRCapturedShiny"
+                            Add-Content -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv" -Value "$CurrentTime,$CapturedPokemonID,$OCRCapture,$OCRPokeLevel,$OCRCapturedAlpha,$OCRCapturedLegendary,$OCRCapturedShiny,$PokeLocation,$PokeChannel,$PokeYen,$DayOfTheWeek,$InGameTime"
 
                             # Checks if the encountered profile file matches the scanned pokemon
                             if ($GetConfigProfileEncountered | Where-Object { $_ -match "\b$OCRCapture\b" }) {
