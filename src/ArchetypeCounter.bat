@@ -139,7 +139,18 @@ if (!($CheckBackupFolders.Count -gt 0)) { $CounterFirstTime = $true } else { $Co
 ##########################
 
 # Checks/Removes out "placeholder.txt" files needed for Github
-$Placeholder1 = "$Global:CounterWorkingDir\debug\placeholder.txt"; $Placeholder2 = "$Global:CounterWorkingDir\stored\backup\placeholder.txt"; if ([System.IO.File]::Exists($Placeholder1)) { Remove-item $Placeholder1 }; if ([System.IO.File]::Exists($Placeholder2)) { Remove-item $Placeholder2 }
+$Placeholder1 = "$Global:CounterWorkingDir\debug\placeholder.txt";
+$Placeholder2 = "$Global:CounterWorkingDir\stored\backup\placeholder.txt";
+$Placeholder3 = "$Global:CounterWorkingDir\stored\history\placeholder.txt";
+if ([System.IO.File]::Exists($Placeholder1)) {
+    Remove-item $Placeholder1
+};
+if ([System.IO.File]::Exists($Placeholder2)) {
+    Remove-item $Placeholder2
+}
+if ([System.IO.File]::Exists($Placeholder3)) {
+    Remove-item $Placeholder3
+}
 
 ########################
 # -------------------- #
@@ -1876,7 +1887,15 @@ $ArchetypeCounterForm.Add_Shown({
                         $OCRPokeLevel = $OCRCaptured -replace "[^0-9]" , ''
                         $OCRCaptured = $OCRCaptured -replace '[0-9]','' 
                     }; 
-                    $OCRCaptured = $OCRCaptured -replace [regex]::escape('lv.'),',' -replace [regex]::escape('lvl.'),',' -replace [regex]::escape('Lv'),',' -replace [regex]::escape('Lvy.'),',' -replace [regex]::escape('Ly.'),',' -replace [regex]::escape('Ly .'),',' -replace [regex]::escape('nv.'),',' -replace [regex]::escape('niv.'),',' -replace [regex]::escape('Lv,'),',' -replace [regex]::escape('Ly,'),',' -replace [regex]::escape('Ly ,'),',' -replace '[[\]{}+-]' -replace [regex]::escape('Ｌ'),'' -replace [regex]::escape('ㄴ'),'' -replace [regex]::escape('\'),'' -replace [regex]::escape('/'),'' -replace [regex]::escape('|'),'' -replace '\s',''; $OCRCaptured = $OCRCaptured -split ","; $OCRCaptured = $OCRCaptured | where { $_ -ne "" }; $OCRCaptured = $OCRCaptured.trim(); 0..7 | % { if ($OCRCaptured[$_].Length -eq 1) { $OCRCaptured[$_] = ''; $OCRCaptured = $OCRCaptured | where { $_ -ne "" } } }; if ($GameLanguage -match "Korean" -or $GameLanguage -match "Japanese" -or $GameLanguage -match "ChineseTraditional" -or $GameLanguage -match "ChineseSimplified") { $OCRCaptured = $OCRCaptured -replace '[a-zA-Z]','' -replace '[[\]{}''"+-]' -replace [regex]::escape('#'),'' }
+                    $OCRCaptured = $OCRCaptured -replace [regex]::escape('lv.'),',' -replace [regex]::escape('lvl.'),',' -replace [regex]::escape('Lv'),',' -replace [regex]::escape('Lvy.'),',' -replace [regex]::escape('Ly.'),',' -replace [regex]::escape('Ly .'),',' -replace [regex]::escape('nv.'),',' -replace [regex]::escape('niv.'),',' -replace [regex]::escape('Lv,'),',' -replace [regex]::escape('Ly,'),',' -replace [regex]::escape('Ly ,'),',' -replace '[[\]{}+-]' -replace [regex]::escape('Ｌ'),'' -replace [regex]::escape('ㄴ'),'' -replace [regex]::escape('\'),'' -replace [regex]::escape('/'),'' -replace [regex]::escape('|'),'' -replace '\s','';
+                    $OCRCaptured = $OCRCaptured -split ",";
+                    $OCRCaptured = $OCRCaptured | where { $_ -ne "" };
+                    $OCRCaptured = $OCRCaptured.trim();
+                    0..7 | % { if ($OCRCaptured[$_].Length -eq 1) { $OCRCaptured[$_] = '';
+                    $OCRCaptured = $OCRCaptured | where { $_ -ne "" } } };
+                    if ($GameLanguage -match "Korean" -or $GameLanguage -match "Japanese" -or $GameLanguage -match "ChineseTraditional" -or $GameLanguage -match "ChineseSimplified") {
+                        $OCRCaptured = $OCRCaptured -replace '[a-zA-Z]','' -replace '[[\]{}''"+-]' -replace [regex]::escape('#'),'' 
+                    }
 
                     # Special checks for symbols/characters in front of Pokemon names + last corrections
                     $OCRCaptured = $OCRCaptured.Replace('@','').Replace('®','').Replace('&','').Replace('?','').Replace('回','').Replace('园','').Replace('圖','').Replace('图','').Replace('其','').Replace('較','').Replace("(", "").Replace(")", "").Replace('니드런우','니드런').Replace('니드런?','니드런').Replace('ㅇ','');
@@ -1886,8 +1905,14 @@ $ArchetypeCounterForm.Add_Shown({
                     if ($GameLanguage -match "Japanese" -or $GameLanguage -match "Korean") { $OCRCaptured = $OCRCaptured -replace '[\W]', ''; $OCRCaptured = $OCRCaptured.Replace("ニドランマ","ニドラン").Replace("ニドランキ","ニドラン").Replace("ニドランネ","ニドラン").Replace("ニドランそ","ニドラン").Replace("ニドランネィ","ニドラン").Replace("ニドランャ","ニドラン").Replace('ニドランウ','ニドラン').Replace('ニドランツウツ','ニドラン').Replace('バパバラス','パラス').Replace('ニニドラン','ニドラン').Replace('ペルシアゲアン','ペルシアン').Replace('キャタビ','キャタピ') }
 
                     # Pokemon name fix - Special check for Pokemon that are not name tracked properly through OCR (Resolved through text file)
-                    $PokemonNameFixConfig = "$Global:CounterWorkingDir\stored\Config_PokemonNameFix.txt"; $GetPokemonNameFixConfig = [IO.File]::ReadAllLines("$PokemonNameFixConfig")       
-                    $NameFixLines = $GetPokemonNameFixConfig.Count; 12..$NameFixLines | % { $CompareBadName = $GetPokemonNameFixConfig[$_] -replace ';.+',''; $CompareGoodName = $GetPokemonNameFixConfig[$_] -replace '^[^;]+;', ''; $CompareGoodName = $CompareGoodName.trimstart(); $EscapedBadName = [regex]::Escape($CompareBadName); $OCRCaptured = $OCRCaptured -replace "\b$EscapedBadName\b","$CompareGoodName" }; $OCRCaptured = $OCRCaptured -Replace 'Blank',''
+                    $PokemonNameFixConfig = "$Global:CounterWorkingDir\stored\Config_PokemonNameFix.txt"; 
+                    $GetPokemonNameFixConfig = [IO.File]::ReadAllLines("$PokemonNameFixConfig")       
+                    $NameFixLines = $GetPokemonNameFixConfig.Count;
+                    12..$NameFixLines | % { $CompareBadName = $GetPokemonNameFixConfig[$_] -replace ';.+','';
+                    $CompareGoodName = $GetPokemonNameFixConfig[$_] -replace '^[^;]+;', ''; $CompareGoodName = $CompareGoodName.trimstart();
+                    $EscapedBadName = [regex]::Escape($CompareBadName);
+                    $OCRCaptured = $OCRCaptured -replace "\b$EscapedBadName\b","$CompareGoodName" };
+                    $OCRCaptured = $OCRCaptured -Replace 'Blank',''
 
                     # Increments Pokemon seen count by correct value (FOR TOTAL ENCOUNTERED POKEMON) - Part 1
                     $OCRCapturedLines = ($OCRCaptured | Measure-Object -Line).Lines
