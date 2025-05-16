@@ -8,6 +8,8 @@
 Archetype Counter is a tool for the online video game [PokeMMO](https://pokemmo.com/).
 
 Automatically track encounters (Horde, Safari, etc.) and manually track when you receive Eggs or Fossils.
+
+**This fork adds a new history folder, which holds CSVs with data about your encounters.**
  
 &nbsp;
 
