@@ -1773,7 +1773,6 @@ $ArchetypeCounterForm.Add_Shown({
                     $OCRSetMetadata = "$Global:CounterWorkingDir\lib\Tesseract-OCR-5.3.2x64\bin\ArchetypeMetadataOCR.txt";
                     $OCRSetMetadata = [IO.File]::ReadAllLines("$OCRSetMetadata");
                     $OCRMetadata = $OCRSetMetadata;
-                    $OCRPokeLevel = 0
                     Remove-Item $OCRSetConfig -Force
                     Remove-Item $OCRSetMetadata -Force
 
@@ -1876,15 +1875,15 @@ $ArchetypeCounterForm.Add_Shown({
                     if ($GameLanguage -match "Korean") { 
                         if ($OCRCaptured -match '레벨') { 
                             $OCRCaptured = $OCRCaptured -replace '레벨',','; 
-                            $OCRPokeLevel = $OCRCaptured -replace "[^0-9]" , ''
+                            $OCRPokeLevels = [regex]::Matches($OCRCaptured, '\d?\d?\d')
                             $OCRCaptured = $OCRCaptured -replace '[0-9]','' 
                         } else { 
-                            $OCRPokeLevel = $OCRCaptured -replace "[^0-9]" , ''
+                            $OCRPokeLevels = [regex]::Matches($OCRCaptured, '\d?\d?\d')
                             $OCRCaptured = $OCRCaptured -replace '[0-9]',','
 
                         } 
                     } else { 
-                        $OCRPokeLevel = $OCRCaptured -replace "[^0-9]" , ''
+                        $OCRPokeLevels = [regex]::Matches($OCRCaptured, '\d?\d?\d')
                         $OCRCaptured = $OCRCaptured -replace '[0-9]','' 
                     }; 
                     $OCRCaptured = $OCRCaptured -replace [regex]::escape('lv.'),',' -replace [regex]::escape('lvl.'),',' -replace [regex]::escape('Lv'),',' -replace [regex]::escape('Lvy.'),',' -replace [regex]::escape('Ly.'),',' -replace [regex]::escape('Ly .'),',' -replace [regex]::escape('nv.'),',' -replace [regex]::escape('niv.'),',' -replace [regex]::escape('Lv,'),',' -replace [regex]::escape('Ly,'),',' -replace [regex]::escape('Ly ,'),',' -replace '[[\]{}+-]' -replace [regex]::escape('Ｌ'),'' -replace [regex]::escape('ㄴ'),'' -replace [regex]::escape('\'),'' -replace [regex]::escape('/'),'' -replace [regex]::escape('|'),'' -replace '\s','';
@@ -1902,14 +1901,18 @@ $ArchetypeCounterForm.Add_Shown({
                     $OCRCaptured = $OCRCaptured -replace [regex]::escape("Mr.Mime"),"Mr. Mime" -replace [regex]::escape("M.Mime"),"M. Mime" -replace [regex]::escape("Mr Mime"),"Mr. Mime" -replace [regex]::escape("M Mime"),"M. Mime" -replace [regex]::escape("MimeJr."),"Mime Jr." -replace [regex]::escape("Farfetch'd"),"Farfetch’d" -replace [regex]::escape("Farfetchd"),"Farfetch’d" -replace [regex]::escape("IHlumise"),"Illumise" -replace [regex]::escape("IHHlumise"),"Illumise"
                     if ($OCRCaptured -match 'Nidoran') { $OCRCaptured = $OCRCaptured -replace '[^a-zA-Z]', '' -replace 'Nidorand', 'Nidoran' -replace 'Nidoranod', 'Nidoran' }
                     if ($GameLanguage -match "Chinese") { $OCRCaptured = $OCRCaptured -replace '[\W]', '' -replace [regex]::escape("_"),"" -replace '[a-zA-Z0-9]', '' -replace '邙', '' }
-                    if ($GameLanguage -match "Japanese" -or $GameLanguage -match "Korean") { $OCRCaptured = $OCRCaptured -replace '[\W]', ''; $OCRCaptured = $OCRCaptured.Replace("ニドランマ","ニドラン").Replace("ニドランキ","ニドラン").Replace("ニドランネ","ニドラン").Replace("ニドランそ","ニドラン").Replace("ニドランネィ","ニドラン").Replace("ニドランャ","ニドラン").Replace('ニドランウ','ニドラン').Replace('ニドランツウツ','ニドラン').Replace('バパバラス','パラス').Replace('ニニドラン','ニドラン').Replace('ペルシアゲアン','ペルシアン').Replace('キャタビ','キャタピ') }
+                    if ($GameLanguage -match "Japanese" -or $GameLanguage -match "Korean") {
+                        $OCRCaptured = $OCRCaptured -replace '[\W]', '';
+                        $OCRCaptured = $OCRCaptured.Replace("ニドランマ","ニドラン").Replace("ニドランキ","ニドラン").Replace("ニドランネ","ニドラン").Replace("ニドランそ","ニドラン").Replace("ニドランネィ","ニドラン").Replace("ニドランャ","ニドラン").Replace('ニドランウ','ニドラン').Replace('ニドランツウツ','ニドラン').Replace('バパバラス','パラス').Replace('ニニドラン','ニドラン').Replace('ペルシアゲアン','ペルシアン').Replace('キャタビ','キャタピ')
+                    }
 
                     # Pokemon name fix - Special check for Pokemon that are not name tracked properly through OCR (Resolved through text file)
                     $PokemonNameFixConfig = "$Global:CounterWorkingDir\stored\Config_PokemonNameFix.txt"; 
                     $GetPokemonNameFixConfig = [IO.File]::ReadAllLines("$PokemonNameFixConfig")       
                     $NameFixLines = $GetPokemonNameFixConfig.Count;
                     12..$NameFixLines | % { $CompareBadName = $GetPokemonNameFixConfig[$_] -replace ';.+','';
-                    $CompareGoodName = $GetPokemonNameFixConfig[$_] -replace '^[^;]+;', ''; $CompareGoodName = $CompareGoodName.trimstart();
+                    $CompareGoodName = $GetPokemonNameFixConfig[$_] -replace '^[^;]+;', '';
+                    $CompareGoodName = $CompareGoodName.trimstart();
                     $EscapedBadName = [regex]::Escape($CompareBadName);
                     $OCRCaptured = $OCRCaptured -replace "\b$EscapedBadName\b","$CompareGoodName" };
                     $OCRCaptured = $OCRCaptured -Replace 'Blank',''
@@ -1929,10 +1932,20 @@ $ArchetypeCounterForm.Add_Shown({
                     $GetConfigProfile = $GetConfigProfile -replace "Encountered_Count=.*", "Encountered_Count=$OCRCapturedTotal"
 
                     # Adds count from the specific encountered type (Single/Double/Triple/Horde)
-                    if ($OCRCapturedLines -match '1') { $SingleBattleTotal = [int]$SingleBattle + [int]1; $GetConfigProfile = $GetConfigProfile -replace "Single_Battle=.*", "Single_Battle=$SingleBattleTotal" }
-                    if ($OCRCapturedLines -match '2') { $DoubleBattleTotal = [int]$DoubleBattle + [int]1; $GetConfigProfile = $GetConfigProfile -replace "Double_Battle=.*", "Double_Battle=$DoubleBattleTotal" }
-                    if ($OCRCapturedLines -match '3') { $TripleBattleTotal = [int]$TripleBattle + [int]1; $GetConfigProfile = $GetConfigProfile -replace "Triple_Battle=.*", "Triple_Battle=$TripleBattleTotal" }
-                    if ($OCRCapturedLines -match '4' -or $OCRCapturedLines -match '5') { $HordeBattleTotal = [int]$HordeBattle + [int]1; $GetConfigProfile = $GetConfigProfile -replace "Horde_Battle=.*", "Horde_Battle=$HordeBattleTotal" }
+                    if ($OCRCapturedLines -match '1') {
+                        $SingleBattleTotal = [int]$SingleBattle + [int]1;
+                        $GetConfigProfile = $GetConfigProfile -replace "Single_Battle=.*", "Single_Battle=$SingleBattleTotal" }
+                    if ($OCRCapturedLines -match '2') {
+                        $DoubleBattleTotal = [int]$DoubleBattle + [int]1;
+                        $GetConfigProfile = $GetConfigProfile -replace "Double_Battle=.*", "Double_Battle=$DoubleBattleTotal" }
+                    if ($OCRCapturedLines -match '3') { 
+                        $TripleBattleTotal = [int]$TripleBattle + [int]1;
+                        $GetConfigProfile = $GetConfigProfile -replace "Triple_Battle=.*", "Triple_Battle=$TripleBattleTotal"
+                    }
+                    if ($OCRCapturedLines -match '4' -or $OCRCapturedLines -match '5') {
+                        $HordeBattleTotal = [int]$HordeBattle + [int]1;
+                        $GetConfigProfile = $GetConfigProfile -replace "Horde_Battle=.*", "Horde_Battle=$HordeBattleTotal"
+                    }
 
                     # Sets all changes back into the Config file (for total count encountered)
                     [IO.File]::WriteAllLines($SetConfigProfile, $GetConfigProfile)
@@ -1978,7 +1991,8 @@ $ArchetypeCounterForm.Add_Shown({
                             # Adds the scanned Pokemon to the history file
                             $TodaysDate = (Get-Date).ToString('MM-dd-yyyy')
                             $CurrentTime = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fff')
-                            Add-Content -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv" -Value "$CurrentTime,$CapturedPokemonID,$OCRCapture,$OCRPokeLevel,$OCRCapturedAlpha,$OCRCapturedLegendary,$OCRCapturedShiny,$PokeLocation,$PokeChannel,$PokeYen,$DayOfTheWeek,$InGameTime"
+                            $PokeLevel = $OCRPokeLevels.Groups[$CaptureLineIndex-1].Value
+                            Add-Content -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv" -Value "$CurrentTime,$CapturedPokemonID,$OCRCapture,$PokeLevel,$OCRCapturedAlpha,$OCRCapturedLegendary,$OCRCapturedShiny,$PokeLocation,$PokeChannel,$PokeYen,$DayOfTheWeek,$InGameTime"
 
                             # Checks if the encountered profile file matches the scanned pokemon
                             if ($GetConfigProfileEncountered | Where-Object { $_ -match "\b$OCRCapture\b" }) {
