@@ -1454,6 +1454,9 @@ $ArchetypeCounterForm.Add_Shown({
         # Grabs current working directory/location (For Archetype Counter)
         $Global:CounterWorkingDir = $PWD
 
+        # Grabs the current date for use in the script
+        $TodaysDate = (Get-Date).ToString('MM-dd-yyyy')
+
         # Resets counter working directory to the PokeMMO main root directory & adds as variable
         Set-Location ..\..; Set-Location ..\..; $PokeMMOWorkingDir = $PWD
 
@@ -1989,7 +1992,6 @@ $ArchetypeCounterForm.Add_Shown({
                             Clear-Variable -Name OCRCaptureEncountered, OCRCaptureEncounteredNumber, NotifyEncounterCount
 
                             # Adds the scanned Pokemon to the history file
-                            $TodaysDate = (Get-Date).ToString('MM-dd-yyyy')
                             $CurrentTime = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fff')
                             $PokeLevel = $OCRPokeLevels.Groups[$CaptureLineIndex-1].Value
                             Add-Content -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv" -Value "$CurrentTime,$CapturedPokemonID,$OCRCapture,$PokeLevel,$OCRCapturedAlpha,$OCRCapturedLegendary,$OCRCapturedShiny,$PokeLocation,$PokeChannel,$PokeYen,$DayOfTheWeek,$InGameTime"
