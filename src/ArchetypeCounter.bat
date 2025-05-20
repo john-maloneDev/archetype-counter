@@ -164,7 +164,7 @@ if (!(Test-Path -Path "$Global:CounterWorkingDir\stored\backup\$TodaysDate")) { 
 
 # Creates a CSV file for holding the encounter history
 if (!(Test-Path -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv")) { 
-    (New-Item -Path "$Global:CounterWorkingDir\stored\history" -Type File -Name "$TodaysDate.csv" -Value "Timestamp,Pokedex Number,Pokemon Name,Level,Alpha,Legendary,Shiny,Location,Channel,PokeYen,DOW,In-Game Time`n")
+    (New-Item -Path "$Global:CounterWorkingDir\stored\history" -Type File -Name "$TodaysDate.csv" -Value "Timestamp,Pokedex Number,Pokemon Name,Level,Alpha,Legendary,Shiny,Encounter Type,Location,Channel,PokeYen,DOW,In-Game Time`n")
 }
 
 ###############################
@@ -1937,17 +1937,23 @@ $ArchetypeCounterForm.Add_Shown({
                     # Adds count from the specific encountered type (Single/Double/Triple/Horde)
                     if ($OCRCapturedLines -match '1') {
                         $SingleBattleTotal = [int]$SingleBattle + [int]1;
-                        $GetConfigProfile = $GetConfigProfile -replace "Single_Battle=.*", "Single_Battle=$SingleBattleTotal" }
+                        $GetConfigProfile = $GetConfigProfile -replace "Single_Battle=.*", "Single_Battle=$SingleBattleTotal"
+                        $BattleType = 'Single'
+                    }
                     if ($OCRCapturedLines -match '2') {
                         $DoubleBattleTotal = [int]$DoubleBattle + [int]1;
-                        $GetConfigProfile = $GetConfigProfile -replace "Double_Battle=.*", "Double_Battle=$DoubleBattleTotal" }
+                        $GetConfigProfile = $GetConfigProfile -replace "Double_Battle=.*", "Double_Battle=$DoubleBattleTotal"
+                        $BattleType = 'Double'
+                    }
                     if ($OCRCapturedLines -match '3') { 
                         $TripleBattleTotal = [int]$TripleBattle + [int]1;
                         $GetConfigProfile = $GetConfigProfile -replace "Triple_Battle=.*", "Triple_Battle=$TripleBattleTotal"
+                        $BattleType = '3x Horde'
                     }
                     if ($OCRCapturedLines -match '4' -or $OCRCapturedLines -match '5') {
                         $HordeBattleTotal = [int]$HordeBattle + [int]1;
                         $GetConfigProfile = $GetConfigProfile -replace "Horde_Battle=.*", "Horde_Battle=$HordeBattleTotal"
+                        $BattleType = '5x Horde'
                     }
 
                     # Sets all changes back into the Config file (for total count encountered)
@@ -1996,7 +2002,7 @@ $ArchetypeCounterForm.Add_Shown({
 
                             # Adds the scanned Pokemon to the history file
                             $PokeLevel = $OCRPokeLevels.Groups[$CaptureLineIndex-1].Value
-                            Add-Content -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv" -Value "$CurrentTime,$CapturedPokemonID,$OCRCapture,$PokeLevel,$OCRCapturedAlpha,$OCRCapturedLegendary,$OCRCapturedShiny,$PokeLocation,$PokeChannel,$PokeYen,$DayOfTheWeek,$InGameTime"
+                            Add-Content -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv" -Value "$CurrentTime,$CapturedPokemonID,$OCRCapture,$PokeLevel,$OCRCapturedAlpha,$OCRCapturedLegendary,$OCRCapturedShiny,$BattleType,$PokeLocation,$PokeChannel,$PokeYen,$DayOfTheWeek,$InGameTime"
 
                             # Checks if the encountered profile file matches the scanned pokemon
                             if ($GetConfigProfileEncountered | Where-Object { $_ -match "\b$OCRCapture\b" }) {
