@@ -1966,6 +1966,9 @@ $ArchetypeCounterForm.Add_Shown({
                     # Sets the variables to be used in the foreach loop
                     $CaptureLineIndex = 0; $ScanErrorRecieved = 0; $EncounterNumberDBArray = ''
 
+                    # Sets the current time for the encountered Pokemon
+                    $CurrentTime = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fff')
+
                     # Does a proper loop in the OCRCaptured variable to add pokemon names into counter individually
                     foreach ($OCRCapture in $OCRCaptured) {
 
@@ -1992,7 +1995,6 @@ $ArchetypeCounterForm.Add_Shown({
                             Clear-Variable -Name OCRCaptureEncountered, OCRCaptureEncounteredNumber, NotifyEncounterCount
 
                             # Adds the scanned Pokemon to the history file
-                            $CurrentTime = (Get-Date).ToString('yyyy-MM-ddTHH:mm:ss.fff')
                             $PokeLevel = $OCRPokeLevels.Groups[$CaptureLineIndex-1].Value
                             Add-Content -Path "$Global:CounterWorkingDir\stored\history\$TodaysDate.csv" -Value "$CurrentTime,$CapturedPokemonID,$OCRCapture,$PokeLevel,$OCRCapturedAlpha,$OCRCapturedLegendary,$OCRCapturedShiny,$PokeLocation,$PokeChannel,$PokeYen,$DayOfTheWeek,$InGameTime"
 
